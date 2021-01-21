@@ -24,32 +24,35 @@ class ChatBot:
                 print(f'Ошибка при получении события из метода run(): {err}')
 
     def _on_event(self, event):
+        self.sender_path = ''
         if event.type == vk_api.bot_longpoll.VkBotEventType.MESSAGE_REPLY:
             pass
         elif event.type == vk_api.bot_longpoll.VkBotEventType.MESSAGE_NEW:
             date = event.object.message['date']
             date_normal = time.ctime(date)
-            sender_path = 'https://vk.com/id' + str(event.object.message['from_id'])
-            sender_name, sender_surname = self._parse_data(sender_path)
+            self.sender_path = 'https://vk.com/id' + str(event.object.message['from_id'])
+            sender_name, sender_surname = self._parse_data(self.sender_path)
+            message_new = event.object.message['text']
             print('-' * 30)
-            print(f'Ссылка на отправителя: {sender_path}\nИмя: {sender_name}\nФамилия: {sender_surname}')
+            print(f'Ссылка на отправителя: {self.sender_path}\nИмя: {sender_name}\nФамилия: {sender_surname}')
             print(f'Время и время: {date_normal}')
-            print(f"Сообщение: {event.object.message['text']}")
-            self._answer(event, sender_name, sender_surname)
+            print(f"Сообщение: {message_new}")
+            answer_message = self._checking_text(message_new, sender_name, sender_surname)
+            self._answer(event, answer_message)
         elif event.type == vk_api.bot_longpoll.VkBotEventType.MESSAGE_TYPING_STATE:
             try:
-                sender_path = 'https://vk.com/id' + str(event.object.from_id)
+                self.sender_path = 'https://vk.com/id' + str(event.object.from_id)
             except Exception as err:
                 print(err, event)
                 print(type(err), event.type)
-            print(f'Пользователь "{sender_path}" что-то пишет........')
+            print(f'Пользователь "{self.sender_path}" что-то пишет........')
         else:
             print(f'====> Получено неизвестное событие {event}')
             print(f'>>>> Получено неизвестное событие {event.type}')
 
-    def _answer(self, event, sender_name, sender_surname):
+    def _answer(self, event, answer_message):
         self.api.messages.send(
-            message=f'Добрый день, {sender_surname} {sender_name}!',
+            message=answer_message,
             random_id=random.randint(0, 2 ** 20),
             peer_id=event.object.message['peer_id'],
         )
@@ -62,6 +65,26 @@ class ChatBot:
         sender_surname = str(title_tag).split(' ')[1]
         return sender_name, sender_surname
 
+    def _checking_text(self, text, name, surname):
+        input_text = text.lower()
+        words_hello = ('привет', 'hello', 'здравствуйте', 'добрый день')
+        words_bot = ("чат", "бот", "робот")
+        users_name = ("Дмитрий", "Олег")
+        users_surname = ("Щеглов", "Иванов", )
+
+        for i in words_hello:
+            if i in input_text:
+                print("Приветствую тебя, " + author + "! " + "Как твои дела?")
+
+        for i in words_bot:
+            if i in input_text:
+                print("Я чат-бот. Нужна ли моя помощь?")
+
+        for i in users_name:
+            if i in author.capitalize():
+                print("Ух ты! Привет, " + author + "! " + "Мне очень нравится это имя!")
+
+        return 0
 
 if __name__ == '__main__':
     chat_bot_vk = ChatBot(group_id=config.group_id, token=config.token)
